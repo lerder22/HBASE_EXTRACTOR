@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ute.recener</groupId>
+    <artifactId>DAICE-spark</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <encoding>UTF-8</encoding>
+        <spark.version>2.4.0-cdh6.1.0</spark.version>
+        <hbase.version>2.1.0-cdh6.1.0</hbase.version>
+        <oracle.version>12.1.0.2</oracle.version>
+        <scala.version>2.11.12</scala.version>
+
+    </properties>
+
+    <dependencies>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.11</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-sql -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.11</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-yarn -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-yarn_2.11</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-mllib -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-mllib_2.11</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core
+
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-launcher_2.11</artifactId>
+            <version>2.4.0-cdh6.1.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>-->
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-network-common
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-network-common_2.11</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>-->
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-network-shuffle
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-network-shuffle_2.11</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>-->
+        <!-- https://mvnrepository.com/artifact/com.cloudera.spark/spark-lineage
+        <dependency>
+            <groupId>com.cloudera.spark</groupId>
+            <artifactId>spark-lineage_2.11</artifactId>
+            <version>${spark.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>-->
+
+        <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase-client -->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-client</artifactId>
+            <version>${hbase.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase-common -->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-common</artifactId>
+            <version>${hbase.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase-mapreduce -->
+        <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-mapreduce</artifactId>
+            <version>${hbase.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish</groupId>
+                    <artifactId>javax.el</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hbase.connectors.spark</groupId>
+            <artifactId>hbase-spark</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.1</version>
+            <scope>test</scope>
+        </dependency>
+
+
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-streaming-kafka-0-10
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming-kafka-0-10_2.11</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+-->
+
+
+    </dependencies>
+
+
+    <build>
+
+
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+
+                <filtering>true</filtering>
+                <includes>
+                    <include>*.*</include>
+                </includes>
+            </resource>
+        </resources>
+
+        <plugins>
+            <!-- any other plugins -->
+
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>3.2.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                        <configuration>
+                            <args>
+                                <arg>-dependencyfile</arg>
+                                <arg>${project.build.directory}/.scala_dependencies</arg>
+                            </args>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>  <!-- Program packaging-->
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+            </plugin>
+
+
+
+
+        </plugins>
+
+    </build>
+
+    <profiles>
+       
+        <profile>
+            <id>prod_ute</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <application.mode>yarn</application.mode>
+                <database.dialect>org.hibernate.dialect.OracleDialect</database.dialect>
+                <database.auto/>
+                <database.schema>MDMEXP</database.schema>
+                <database.driverClassName>oracle.jdbc.OracleDriver</database.driverClassName>
+                <database.url>
+                    jdbc:oracle:thin:@(DESCRIPTION=(CONNECT_TIMEOUT=120)(RETRY_COUNT=6)(FAILOVER=yes)(SDU=32768)(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=priprdbd01.corp.ute.com.uy)(PORT=1521)))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=bdpriprd)))
+                </database.url>
+                <database.username>DEPTORECENER</database.username>
+                <database.password>DEPTORECENER</database.password>
+                <database.validationQuery>SELECT 1 FROM DUAL</database.validationQuery>
+                <!-- Hadoop -->
+                <hadoop.master.username>recener</hadoop.master.username>
+                <hadoop.master.password>deptorecener</hadoop.master.password>
+                <hadoop.master.host>lvwpmiprdedge02.corp.ute.com.uy</hadoop.master.host>
+                <hadoop.master.port>22</hadoop.master.port>
+                <!-- Home folders -->
+                <!--suppress UnresolvedMavenProperty -->
+                <home.path>/home/${hadoop.master.username}/${hadoop.path}</home.path>    <!-- Home path -->
+                <!--suppress UnresolvedMavenProperty -->
+                <!-- HDFS folders -->
+                <!--suppress UnresolvedMavenProperty -->
+                <hdfs.path>/user/deptorecener/${hadoop.path}</hdfs.path>    <!-- Hdfs path -->
+                <bigdata.database.auto>update</bigdata.database.auto>
+                <bigdata.database.schema>MDM_DATA</bigdata.database.schema>
+                <hbase.zookeeper.quorum>
+                    mdmprdmgm1.corp.ute.com.uy,mdmprdhfs19.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy
+                </hbase.zookeeper.quorum>
+                <hbase.zookeeper.property.clientPort>2181</hbase.zookeeper.property.clientPort>
+            </properties>
+            <dependencies>
+                <!-- Oracle dependencies -->
+                <dependency>
+                    <groupId>com.oracle</groupId>
+                    <artifactId>ojdbc7</artifactId>
+                    <version>${oracle.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+
+
+    </profiles>
+
+</project>
