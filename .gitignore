@@ -1,0 +1,31 @@
+# Compiled files
+*.class
+*.log
+
+# SBT specific
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Spark specific
+*.crc
+_spark_metadata
+
+# IntelliJ IDEA specific
+.idea/
+*.iml
+*.iws
+
+# macOS specific
+.DS_Store
+
+# Other common files
+*.swp
+*.bak
+*.tmp
+*.out
+
+# Build output directory
+dist/
