@@ -113,9 +113,6 @@ object OMDaiceExtractorV3 {
     // Aggregate data by measuring point and day, pivoting the magnitudes
     val omAggregatedDF = aggregateOmData(spark, omDF)
 
-    saveToHDFS(rangesPerMeasuringPoint, "rangesPerMeasuringPoint")
-    saveToHDFS(omAggregatedDF, "omAggregatedDF")
-
     // Format the output DataFrame
     val finalDF = formatOutputData(spark, rangesPerMeasuringPoint, omAggregatedDF)
 
