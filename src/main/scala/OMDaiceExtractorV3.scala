@@ -58,7 +58,7 @@ object OMDaiceExtractorV3 {
 
     // Configure HBase
     val exampleHConf = HBaseConfiguration.create()
-    exampleHConf.set("hbase.zookeeper.quorum", "mdmprdmgm1.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
+    exampleHConf.set("hbase.zookeeper.quorum", "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
 
     // Parse arguments
     val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")

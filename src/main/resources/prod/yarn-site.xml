@@ -28,7 +28,7 @@
   </property>
   <property>
     <name>yarn.resourcemanager.zk-address</name>
-    <value>mdmprdhfs19.corp.ute.com.uy:2181,mdmprdmgm1.corp.ute.com.uy:2181,mdmprdhed2.corp.ute.com.uy:2181</value>
+    <value>mdmprdhed1.corp.ute.com.uy:2181,mdmprdmgm.corp.ute.com.uy:2181,mdmprdhed2.corp.ute.com.uy:2181</value>
   </property>
   <property>
     <name>yarn.resourcemanager.store.class</name>

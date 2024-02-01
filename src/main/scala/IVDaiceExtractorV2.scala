@@ -19,7 +19,7 @@
 //
 //  final val ColumnFamilyData = "IV"
 //  private val ColumnFamilyBytes = Bytes.toBytes(ColumnFamilyData)
-//  private val ZookeeperQuorum = "mdmprdmgm1.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy"
+//  private val ZookeeperQuorum = "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy"
 //
 //  def main(args: Array[String]): Unit = {
 //    System.setProperty("HADOOP_USER_NAME", "recener")

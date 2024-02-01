@@ -28,8 +28,8 @@
   <node name="172.26.152.140" rack="/default"/>
   <node name="mdmprdhfs9.corp.ute.com.uy" rack="/default"/>
   <node name="172.26.152.139" rack="/default"/>
-  <node name="mdmprdmgm1.corp.ute.com.uy" rack="/default"/>
-  <node name="172.26.152.150" rack="/default"/>
+  <node name="mdmprdmgm.corp.ute.com.uy" rack="/default"/>
+  <node name="172.26.152.151" rack="/default"/>
   <node name="mdmprdhfs19.corp.ute.com.uy" rack="/default"/>
   <node name="172.26.152.129" rack="/default"/>
 </topology>

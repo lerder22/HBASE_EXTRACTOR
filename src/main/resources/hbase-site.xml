@@ -100,7 +100,7 @@
   </property>
   <property>
     <name>hbase.zookeeper.quorum</name>
-    <value>mdmprdhfs19.corp.ute.com.uy,mdmprdmgm1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy</value>
+    <value>mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy</value>
   </property>
   <property>
     <name>hbase.zookeeper.property.clientPort</name>

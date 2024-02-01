@@ -281,7 +281,7 @@
                 <bigdata.database.auto>update</bigdata.database.auto>
                 <bigdata.database.schema>MDM_DATA</bigdata.database.schema>
                 <hbase.zookeeper.quorum>
-                    mdmprdmgm1.corp.ute.com.uy,mdmprdhfs19.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy
+                    mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy
                 </hbase.zookeeper.quorum>
                 <hbase.zookeeper.property.clientPort>2181</hbase.zookeeper.property.clientPort>
             </properties>
