@@ -15,7 +15,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 import java.text.SimpleDateFormat
 import java.util.{ArrayList, Base64, Date, Properties, TimeZone}
-import java.text.SimpleDateFormat
+import scala.collection.mutable.ListBuffer
 
 /////////////////////////////
 
@@ -47,25 +47,47 @@ object IndirectMeasureExtractorOptimized {
     val stop = dateFormat.parse(stopString).getTime
 
     val directory: String = args(2)
+    val chunkSize = args(3).toInt
 
     val date1 = "%014d".format(start)
     val date2 = "%014d".format(stop)
 
+
+
+    // Suponiendo que measuringPointIds es una List[String] con 16000 IDs
     val measuringPointIds = getMeasuringPointIds(jdbcUrl, connectionProperties, spark)
 
     if (measuringPointIds.nonEmpty) {
-      val ivDF = extractIVData(exampleHConf, measuringPointIds, date1, date2, spark)
-      val omDF = extractOMData(exampleHConf, start, stop, measuringPointIds, spark)
 
-      val allTogether = ivDF.unionByName(omDF)
-      val allInfo = joinWithMeasuringPointInfo(allTogether, jdbcUrl, connectionProperties, spark)
-      val allInfoWithEquipment = joinWithMeasuringPointEquipments(allInfo, jdbcUrl, connectionProperties, spark)
-      val allInfoWithEquipmentSources = joinWithSources(allInfoWithEquipment, jdbcUrl, connectionProperties, spark)
-      val allInfoWithEquipmentMagnitudes = joinWithMagnitudes(allInfoWithEquipmentSources, jdbcUrl, connectionProperties, spark)
+      // Dividir measuringPointIds en chunks de 1000
+      val chunks = measuringPointIds.grouped(chunkSize)
 
-      val formattedDF = formatDataFrame(allInfoWithEquipmentMagnitudes, spark)
-      saveToHDFS(formattedDF, directory)
+      val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
+      val currentDateTime = dateFormat.format(new Date())
+      val outputPath = s"hdfs:////user/deptorecener/alexOutputs/ivDAICE/$currentDateTime/"
+
+      // Procesar cada chunk
+      chunks.foreach { chunk =>
+        val ivDF = extractIVData(exampleHConf, chunk, date1, date2, spark)
+        val omDF = extractOMData(exampleHConf, start, stop, chunk, spark)
+        val unionDF = ivDF.unionByName(omDF)
+
+        // Realizar cualquier transformación adicional necesaria antes de guardar
+        val processedDF = unionDF
+          .transform(joinWithMeasuringPointInfo(_, jdbcUrl, connectionProperties, spark))
+          .transform(joinWithMeasuringPointEquipments(_, jdbcUrl, connectionProperties, spark))
+          .transform(joinWithSources(_, jdbcUrl, connectionProperties, spark))
+          .transform(joinWithMagnitudes(_, jdbcUrl, connectionProperties, spark))
+          .transform(formatDataFrame(_, spark))
+
+        // Guardar o anexar el DataFrame procesado en el archivo
+        processedDF.coalesce(1).
+          write.mode(SaveMode.Append).
+          options(Map("header" -> "true", "delimiter" -> ";")).
+          csv(outputPath)
+      }
     }
+
   }
 
   private def getMeasuringPointIds(jdbcUrl: String, connectionProperties: Properties, spark: SparkSession): List[String] = {
@@ -212,18 +234,13 @@ object IndirectMeasureExtractorOptimized {
 
     val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
     val currentDateTime = dateFormat.format(new Date())
-    val outputPath = s"hdfs:////user/deptorecener/alexOutputs/$currentDateTime/ivDAICE/"
+    val outputPath = s"hdfs:////user/deptorecener/alexOutputs/ivDAICE/$currentDateTime/"
 
     df.coalesce(1).
-      write.mode(SaveMode.Overwrite).
+      write.mode(SaveMode.Append).
       options(Map("header" -> "true", "delimiter" -> ";")).
       csv(outputPath)
 
-//    df.repartition(numberOfBatches)
-//      .write
-//      .mode(SaveMode.Overwrite)
-//      .options(Map("header" -> "true", "delimiter" -> ","))
-//      .csv("hdfs:////" + directory)
   }
 
   val upperUDF = udf { (d: String, p: Int) => formatDateTime(d, p) }

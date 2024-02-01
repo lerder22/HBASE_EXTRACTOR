@@ -39,7 +39,7 @@ object Inventory {
          FROM MEASURING_POINT@bdmdmprd                MP,
               EQUIPMENT_POINT_CONFIGURATION@bdmdmprd  EC
         WHERE EC.MEASURING_POINT = MP.ID
-          AND EC.READING_CONSTANT > 1 and rownum < 10 )"""
+          AND EC.READING_CONSTANT > 1)"""
   }
 
   def findIndirectMeasuringPointsInfo(): String = {
