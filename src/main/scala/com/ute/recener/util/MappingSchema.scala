@@ -45,19 +45,32 @@ object MappingSchema extends java.io.Serializable {
     // remove time from rowKey, stats row key is for day
     val p0 = rowkey.split(" ")(0)
 
-    val p1 = Bytes.toLong(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("M")))
-    val p2 = if ((result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("MI"))) != null) Bytes.toLong(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("MI"))) else 0
-    val p3 = Bytes.toLong(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("S")))
-    val p4 = Bytes.toLong(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("MP")))
-    val p5 = Bytes.toDouble(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("V")))
-    val p6 = Bytes.toLong(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("D")))
-    val p7 = Bytes.toLong(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("L")))
-    val p8 = Bytes.toString(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("VR")))
+    // Función auxiliar para obtener valores Long de HBase, devuelve 0 si es null
+    def getLongValue(cf: String, qualifier: String): Long = {
+      val value = result.getValue(Bytes.toBytes(cf), Bytes.toBytes(qualifier))
+      if (value != null) Bytes.toLong(value) else -1L
+    }
+
+    // Función auxiliar para obtener valores Double de HBase, devuelve 0.0 si es null
+    def getDoubleValue(cf: String, qualifier: String): Double = {
+      val value = result.getValue(Bytes.toBytes(cf), Bytes.toBytes(qualifier))
+      if (value != null) Bytes.toDouble(value) else -1.0
+    }
+
+    val p1 = getLongValue(cfData, "M")
+    val p2 = getLongValue(cfData, "MI")
+    val p3 = getLongValue(cfData, "S")
+    val p4 = getLongValue(cfData, "MP")
+    val p5 = getDoubleValue(cfData, "V")
+    val p6 = getLongValue(cfData, "D")
+    val p7 = getLongValue(cfData, "L")
+
+    // Para valores String, si el resultado es null, podemos devolver un String vacío
+    val p8 = Option(Bytes.toString(result.getValue(Bytes.toBytes(cfData), Bytes.toBytes("VR")))).getOrElse("")
 
     InsValue(p0, p1, p2, p3, p4, p5, p6, p7, p8)
-
-
   }
+
 
   ////////////////////////////////////////////////
   /////////////// EVENT //////////////////////////
