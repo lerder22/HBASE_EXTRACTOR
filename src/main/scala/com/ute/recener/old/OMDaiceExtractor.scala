@@ -1,8 +1,10 @@
+package com.ute.recener.old
+
 import com.ute.recener.util.{DataBaseConnection, Inventory, MappingSchema}
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{Result, Scan}
-import org.apache.hadoop.hbase.filter.{FuzzyRowFilter, MultiRowRangeFilter}
 import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange
+import org.apache.hadoop.hbase.filter.{FuzzyRowFilter, MultiRowRangeFilter}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil

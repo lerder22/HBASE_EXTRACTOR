@@ -1,30 +1,28 @@
-import com.ute.recener.util.{DataBaseConnection, Inventory, MappingSchema}
+package com.ute.recener.old
+
+import com.ute.recener.util.MappingSchema
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{Result, Scan}
-import org.apache.hadoop.hbase.filter.{FuzzyRowFilter, MultiRowRangeFilter}
-import org.apache.hadoop.hbase.filter.MultiRowRangeFilter.RowRange
+import org.apache.hadoop.hbase.filter.FuzzyRowFilter
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil
 import org.apache.hadoop.hbase.util.{Bytes, Pair}
+import org.apache.log4j.Logger
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.IntegerType
-import org.apache.spark.sql.{SaveMode, SparkSession, functions}
-import org.apache.hadoop.conf.Configuration
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession, functions}
 
+import java.text.SimpleDateFormat
 import java.time.Duration
-import java.util.{ArrayList, Base64, Calendar, Date}
+import java.util.{Base64, Calendar, Date, TimeZone}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
-import java.text.SimpleDateFormat
-import java.util.TimeZone
-import org.apache.log4j.Logger
-
-object OMDaiceExtractorV2 {
+object OMDaiceExtractorV3 {
 
   def formatDateTime(date: String, period: Int): String = {
 
@@ -41,11 +39,8 @@ object OMDaiceExtractorV2 {
     d + " " + hour + ":" + minute
 
   }
-  val calculateDatetime = udf { (d: String, p: Int) => formatDateTime(d, p) }
 
   final val cfDataOM = "OM"
-  final val cfDataBytes = Bytes.toBytes(cfDataOM)
-  private val serialVersionUID = 1L
 
   def main(args: Array[String]): Unit = {
     // Set Hadoop properties
@@ -63,32 +58,24 @@ object OMDaiceExtractorV2 {
     val exampleHConf = HBaseConfiguration.create()
     exampleHConf.set("hbase.zookeeper.quorum", "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
 
-    // Initialize JDBC
-    val jdbcUrl = DataBaseConnection.getUrl
-    val connectionProperties = DataBaseConnection.getConnectionProperties
-
     // Parse arguments
-    val group = args(0)
     val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT-3")) // Set Uruguay timezone
 
-    val startString = args(1)
-    val stopString = args(2)
+    val startString = args(0)
+    val stopString = args(1)
 
     val start = dateFormat.parse(startString).getTime
     val stop = dateFormat.parse(stopString).getTime
 
     // Log the parsed arguments
     logger.info(s"Parsed Arguments: ")
-    logger.info(s"Group: $group")
     logger.info(s"Start String: $startString")
     logger.info(s"Stop String: $stopString")
     logger.info(s"Parsed Start Time: $start")
     logger.info(s"Parsed Stop Time: $stop")
 
     // Generate date strings
-    val date1 = "%010d".format(start / 3600000)
-    val date2 = "%010d".format(stop / 3600000)
     val measureInterval = "1"
 
     // Fuzzy filter parameters
@@ -100,69 +87,35 @@ object OMDaiceExtractorV2 {
     val q1 = "3"
     val measureMagnitude: Set[String] = Set(activeEnergy, q1)
 
-    // Fetch Data from JDBC
-    val findAllMeasuringPointsSql = Inventory.findMeasuringPointsByGroup(group)
-    val measuringPointDf = spark.read.jdbc(jdbcUrl, findAllMeasuringPointsSql, connectionProperties)
-    val measuringPointIds = measuringPointDf.select("ID").map(_.toString().replace("[", "").replace("]", "")).collect().toList
+    // Configure HBase table and filters
+    configureHBaseInput(exampleHConf, "MDM_DATA:OM", fuzzyFilterList(startDate, endDate, measureMagnitude, measureInterval))
 
-    // Check if measuringPointIds is not empty
-    if (measuringPointIds.nonEmpty) {
+    // Read data from HBase into an RDD
+    val hBaseRDD = readFromHBase(spark, exampleHConf)
 
-      // Configure HBase table and filters
-      configureHBaseInput(exampleHConf, "MDM_DATA:OM", fuzzyFilterList(startDate, endDate, measureMagnitude, measureInterval))
+    // Parse the HBase rows into a more manageable format
+    val parsedRDD = hBaseRDD.map(x => MappingSchema.parseOmRow(x, cfDataOM))
 
-      // Read data from HBase into an RDD
-      val hBaseRDD = readFromHBase(spark, exampleHConf)
+    // Define the magnitudes to filter ("1" and "3")
+    val magnitudes = Set("1", "3")
 
-      // Log and check the size of hBaseRDD, parsedRDD, etc.
-      logger.info(s"Size of hBaseRDD: ${hBaseRDD.count}")
-      if (hBaseRDD.isEmpty()) {
-        logger.info("hBaseRDD is empty. Exiting.")
-        return
-      }
+    // Transform original data to a DataFrame and filter it
+    val omDF = transformOmData(spark, parsedRDD.toDF(), 41, magnitudes)
 
-      // Parse the HBase rows into a more manageable format
-      val parsedRDD = hBaseRDD.map(x => MappingSchema.parseOmRow(x, cfDataOM))
+    // Calculate the min and max date ranges for each measuring point
+    val omDatesDF = calculateDateRanges(spark, omDF)
 
-      // Define the magnitudes to filter ("1" and "3")
-      val magnitudes = Set("1", "3")
+    // Generate time ranges based on min/max dates for each measuring point
+    val rangesPerMeasuringPoint = generateTimeRanges(spark, start, stop, omDatesDF)
 
-      // Transform original data to a DataFrame and filter it
-      val omDF = transformOmData(spark, parsedRDD.toDF(), 41, magnitudes)
+    // Aggregate data by measuring point and day, pivoting the magnitudes
+    val omAggregatedDF = aggregateOmData(spark, omDF)
 
-      // Calculate the min and max date ranges for each measuring point
-      val omDatesDF = calculateDateRanges(spark, omDF)
+    // Format the output DataFrame
+    val finalDF = formatOutputData(spark, rangesPerMeasuringPoint, omAggregatedDF)
 
-      // Generate time ranges based on min/max dates for each measuring point
-      val rangesPerMeasuringPoint = generateTimeRanges(spark, start, stop, omDatesDF)
-
-      // Aggregate data by measuring point and day, pivoting the magnitudes
-      val omAggregatedDF = aggregateOmData(spark, omDF)
-
-      // Log and check the size of measuringPointDf and show first 5 rows
-      logger.info(s"Size of measuringPointDf: ${measuringPointDf.count}")
-      measuringPointDf.show(5)
-
-      if (measuringPointDf.count == 0) {
-        logger.info("measuringPointDf is empty. Exiting.")
-        return
-      }
-
-      // Log and check the size of omAggregatedDF and show first 5 rows
-      logger.info(s"Size of omAggregatedDF: ${omAggregatedDF.count}")
-      omAggregatedDF.show(5)
-
-      if (omAggregatedDF.count == 0) {
-        logger.info("omAggregatedDF is empty. Exiting.")
-        return
-      }
-
-      // Format the output DataFrame
-      val finalDF = formatOutputData(spark, rangesPerMeasuringPoint, omAggregatedDF, measuringPointDf)
-
-      // Save the final DataFrame to HDFS
-      saveToHDFS(finalDF)
-    }
+    // Save the final DataFrame to HDFS
+    saveToHDFS(finalDF, "finalDF")
   }
 
   case class FuzzyData(rowKeyPattern: String, maskInfo: String)
@@ -176,7 +129,7 @@ object OMDaiceExtractorV2 {
     import Constants._
 
     val listFuzzy = ListBuffer[FuzzyData]()
-    var tempStart = start.clone().asInstanceOf[Calendar]
+    val tempStart = start.clone().asInstanceOf[Calendar]
 
     while (end.after(tempStart) || end.equals(tempStart)) {
       val d = tempStart.getTime.getTime / TimeDivider
@@ -256,8 +209,7 @@ object OMDaiceExtractorV2 {
       .max("value")
   }
 
-  private def formatOutputData(spark: SparkSession, rangeDF: DataFrame, aggregateDF: DataFrame,
-                               measuringPointDf: DataFrame): DataFrame = {
+  private def formatOutputData(spark: SparkSession, rangeDF: DataFrame, aggregateDF: DataFrame): DataFrame = {
     import spark.implicits._
 
     var omWithNaNDF = rangeDF.join(aggregateDF, rangeDF("measuring_point_range") === aggregateDF("measuring_point") &&
@@ -282,20 +234,19 @@ object OMDaiceExtractorV2 {
     val naFillColumns = Seq("active_energy", "reactive_energy_1").filter(omWithNaNDF.columns.contains)
     omWithNaNDF = omWithNaNDF.na.fill("NaN", naFillColumns)
 
-    omWithNaNDF.join(measuringPointDf, omWithNaNDF("measuring_point_range") === measuringPointDf("ID"))
-      .select($"CODE", $"day_range", $"active_energy", $"reactive_energy_1")
-      .withColumnRenamed("CODE", "measuring_point")
+    omWithNaNDF.select($"measuring_point_range", $"day_range", $"active_energy", $"reactive_energy_1")
+      .withColumnRenamed("measuring_point_range", "measuring_point")
       .withColumnRenamed("day_range", "day")
       .orderBy($"measuring_point", $"day")
-
   }
 
 
-  private def saveToHDFS(df: DataFrame): Unit = {
+
+  private def saveToHDFS(df: DataFrame, folder: String): Unit = {
     val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT-3")) // Set Uruguay timezone
     val currentDateTime = dateFormat.format(new Date())
-    val outputPath = s"hdfs:////user/deptorecener/alexOutputs/$currentDateTime/omDAICE/"
+    val outputPath = s"hdfs:////user/deptorecener/alexOutputs/$currentDateTime/omDAICE/$folder/"
 
     df.coalesce(1)
       .write.mode(SaveMode.Overwrite)
@@ -307,21 +258,4 @@ object OMDaiceExtractorV2 {
     val proto = ProtobufUtil.toScan(scan)
     Base64.getEncoder.encodeToString(proto.toByteArray)
   }
-
-  def filterByMultiRowRangeOM(list: List[String], startDate: String, stopDate: String, measureInterval: String): String = {
-    val scan = new Scan()
-    val ranges = new ArrayList[RowRange]()
-
-    list.foreach(pm => {
-      val startRowKey = pm.reverse.padTo(8, '0').reverse + measureInterval + startDate + "00000"
-      val endRowKey = pm.reverse.padTo(8, '0').reverse + measureInterval + stopDate + "99999"
-      ranges.add(new RowRange(Bytes.toBytes(startRowKey), true, Bytes.toBytes(endRowKey), true))
-    })
-
-    val filter = new MultiRowRangeFilter(ranges)
-    scan.setFilter(filter)
-    //scan
-    convertScanToString(scan)
-  }
-
 }

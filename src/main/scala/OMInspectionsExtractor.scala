@@ -13,23 +13,23 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
-
 import java.text.SimpleDateFormat
-import java.util.{ArrayList, Base64, Date, Properties, TimeZone}
-import scala.collection.mutable.ListBuffer
+import java.util.{ArrayList, Base64, Date, Properties}
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.ZoneId
+
 
 /////////////////////////////
 
 
-object IndirectMeasureExtractorOptimized {
-  final val cfDataIV = "IV"
+object OMInspectionsExtractor {
   final val cfDataOM = "OM"
-  final val cfDataBytes = Bytes.toBytes(cfDataIV)
   private val serialVersionUID = 1L
 
   def main(args: Array[String]): Unit = {
     System.setProperty("HADOOP_USER_NAME", "recener")
-    val conf = new SparkConf().setAppName("Indirect measure Extractor")
+    val conf = new SparkConf().setAppName("OM Inspections Extractor")
     val jdbcUrl = DataBaseConnection.getUrl
     val connectionProperties = DataBaseConnection.getConnectionProperties
     val spark = SparkSession.builder().config(conf).getOrCreate()
@@ -37,78 +37,33 @@ object IndirectMeasureExtractorOptimized {
     val exampleHConf = HBaseConfiguration.create()
     exampleHConf.set("hbase.zookeeper.quorum", "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
 
-    // Parse arguments
+    // Suponiendo que measuringPointDF es un DataFrame con 360k filas
+    val measuringPointDF = getMeasuringPointWithDatesDF(jdbcUrl, connectionProperties, spark)
+
     val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-//    dateFormat.setTimeZone(TimeZone.getTimeZone("GMT-3")) // Set Uruguay timezone
 
-    val startString = args(0)
-    val stopString = args(1)
+    val currentDateTime = dateFormat.format(new Date())
 
-    val start = dateFormat.parse(startString).getTime
-    val stop = dateFormat.parse(stopString).getTime
+    val outputPath = s"hdfs:////user/deptorecener/alexOutputs/omDAICEshifted/$currentDateTime/"
 
-    val directory: String = args(2)
-    val chunkSize = args(3).toInt
+    // Procesar cada chunk
+    val omDF = extractOMData(exampleHConf, measuringPointDF, spark)
 
-    val date1 = "%014d".format(start)
-    val date2 = "%014d".format(stop)
-
-
-
-    // Suponiendo que measuringPointIds es una List[String] con 16000 IDs
-    val measuringPointIds = getMeasuringPointIds(jdbcUrl, connectionProperties, spark)
-
-    if (measuringPointIds.nonEmpty) {
-
-      // Dividir measuringPointIds en chunks de 1000
-      val chunks = measuringPointIds.grouped(chunkSize)
-
-      val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
-      val currentDateTime = dateFormat.format(new Date())
-      val outputPath = s"hdfs:////user/deptorecener/alexOutputs/ivDAICE/$currentDateTime/"
-
-      // Procesar cada chunk
-      chunks.foreach { chunk =>
-        val ivDF = extractIVData(exampleHConf, chunk, date1, date2, spark)
-        val omDF = extractOMData(exampleHConf, start, stop, chunk, spark)
-        val unionDF = ivDF.unionByName(omDF)
-
-        // Realizar cualquier transformación adicional necesaria antes de guardar
-        val processedDF = unionDF
-          .transform(joinWithMeasuringPointInfo(_, jdbcUrl, connectionProperties, spark))
-          .transform(joinWithMeasuringPointEquipments(_, jdbcUrl, connectionProperties, spark))
-          .transform(joinWithSources(_, jdbcUrl, connectionProperties, spark))
-          .transform(joinWithMagnitudes(_, jdbcUrl, connectionProperties, spark))
-          .transform(formatDataFrame(_, spark))
-
-        // Guardar o anexar el DataFrame procesado en el archivo
-        processedDF.coalesce(1).
-          write.mode(SaveMode.Append).
-          options(Map("header" -> "true", "delimiter" -> ";")).
-          csv(outputPath)
-      }
-    }
-
+    // Guardar o anexar el DataFrame procesado en el archivo
+    omDF.coalesce(1).
+      write.mode(SaveMode.Append).
+      options(Map("header" -> "true", "delimiter" -> ";")).
+      csv(outputPath)
   }
 
-  private def getMeasuringPointIds(jdbcUrl: String, connectionProperties: Properties, spark: SparkSession): List[String] = {
-    import spark.implicits._
-
-    val findIndirectMeasuringPointsSql = Inventory.findIndirectMeasuringPoints()
-    val measuringPointDf = spark.read.jdbc(jdbcUrl, findIndirectMeasuringPointsSql, connectionProperties)
-    measuringPointDf.select("ID").map(_.toString.replace("[", "").replace("]", ""))
-      .collect().toList
-
-  }
-
-  def getMeasuringPointIdsWithDates(jdbcUrl: String, connectionProperties: Properties, spark: SparkSession): DataFrame = {
+  private def getMeasuringPointWithDatesDF(jdbcUrl: String, connectionProperties: Properties, spark: SparkSession): DataFrame = {
     import spark.implicits._
 
     // Assuming Inventory.findInspectedMeasuringPoints() returns a SQL query that includes a DATE column in 'dd/MM/yyyy' format
-    val findIndirectMeasuringPointsSql = Inventory.findInspectedMeasuringPoints()
+    val findInspectedMeasuringPointsSql = Inventory.findInspectedMeasuringPoints()
 
     // Read the data from your database
-    val measuringPointDf = spark.read.jdbc(jdbcUrl, findIndirectMeasuringPointsSql, connectionProperties)
+    val measuringPointDf = spark.read.jdbc(jdbcUrl, findInspectedMeasuringPointsSql, connectionProperties)
 
     // Select the ID and DATE columns, and convert DATE from 'dd/MM/yyyy' to 'yyyyMMdd' format
     val formattedDf = measuringPointDf
@@ -117,23 +72,6 @@ object IndirectMeasureExtractorOptimized {
       .select($"PUNTO_SERVICIO".as("PM"), $"FORMATTED_DATE".as("DATE")) // Rename columns as needed for filterByMultiRowRangeOM function
 
     formattedDf
-  }
-
-  private def extractIVData(hBaseConf: Configuration, measuringPointIds: List[String], startDate: String, endDate: String, spark: SparkSession): DataFrame = {
-    import spark.implicits._
-
-    hBaseConf.set(TableInputFormat.INPUT_TABLE, "MDM_DATA:IV")
-    hBaseConf.set(TableInputFormat.SCAN, filterByMultiRowRangeIV(measuringPointIds, startDate, endDate))
-
-    val hBaseRDD: RDD[(ImmutableBytesWritable, Result)] = spark.sparkContext.newAPIHadoopRDD(hBaseConf, classOf[TableInputFormat], classOf[ImmutableBytesWritable], classOf[Result])
-    val resultRDD = hBaseRDD.map(tuple => tuple._2)
-    val ivRDD = resultRDD.map(x => MappingSchema.parseIvRow(x, cfDataIV))
-
-    val magnitudes = Set("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24")
-    ivRDD.toDF().filter($"magnitude".isInCollection(magnitudes))
-      .withColumn("date", (to_utc_timestamp(from_unixtime((($"date") / 1000), "yyyy-MM-dd HH:mm:ss"), "UTC")))
-      .select($"measuring_point", $"date", $"magnitude", $"measurement_interval", $"value", $"source")
-      .na.fill("INSTANTANEO", Seq("measurement_interval"))
   }
 
   def filterByMultiRowRangeIV(list: List[String], startDate: String, stopDate: String): String = {
@@ -157,17 +95,13 @@ object IndirectMeasureExtractorOptimized {
     Base64.getEncoder.encodeToString(proto.toByteArray)
   }
 
-  private def extractOMData(hBaseConf: Configuration, start: Long, stop: Long, measuringPointIds: List[String], spark: SparkSession): DataFrame = {
+  private def extractOMData(hBaseConf: Configuration, measuringPointDF: DataFrame, spark: SparkSession): DataFrame = {
     import spark.implicits._
 
     val mi = "1" // Measurement interval = 1 = QH
-    val d1 = start / 3600000
-    val dateOM1 = "%010d".format(d1)
-    val d2 = stop / 3600000
-    val dateOM2 = "%010d".format(d2)
 
     hBaseConf.set(TableInputFormat.INPUT_TABLE, "MDM_DATA:OM")
-    hBaseConf.set(TableInputFormat.SCAN, filterByMultiRowRangeOM(measuringPointIds, dateOM1, dateOM2, mi))
+    hBaseConf.set(TableInputFormat.SCAN, filterByServicePointOM(measuringPointDF, mi))
 
     val hBaseRDD: RDD[(ImmutableBytesWritable, Result)] = spark.sparkContext.newAPIHadoopRDD(hBaseConf, classOf[TableInputFormat], classOf[ImmutableBytesWritable], classOf[Result])
     val resultRDD = hBaseRDD.map(tuple => tuple._2)
@@ -188,6 +122,37 @@ object IndirectMeasureExtractorOptimized {
     list.foreach(pm => {
       val startRowKey = pm.reverse.padTo(8, '0').reverse + mi + startDate + "00000"
       val endRowKey = pm.reverse.padTo(8, '0').reverse + mi + stopDate + "99999"
+      ranges.add(new RowRange(Bytes.toBytes(startRowKey), true, Bytes.toBytes(endRowKey), true))
+    })
+
+    val filter = new MultiRowRangeFilter(ranges)
+    scan.setFilter(filter)
+    //scan
+    convertScanToString(scan)
+  }
+
+  private def filterByServicePointOM(df: DataFrame, measureInterval: String): String = {
+    val scan = new Scan()
+    val ranges = new ArrayList[RowRange]()
+    val formatter = DateTimeFormatter.ofPattern("yyyyMMdd")
+
+    df.collect().foreach(row => {
+      val pm = row.getAs[java.math.BigDecimal]("PM").toString
+      val dateStr = row.getAs[String]("DATE")
+      val date = LocalDate.parse(dateStr, formatter)
+
+      // Start of the day in milliseconds since Unix epoch
+      val dateInMilliseconds = date.atStartOfDay(ZoneId.systemDefault()).toInstant.toEpochMilli
+      // Convert to hours and format
+      val endInHours = "%010d".format(dateInMilliseconds / (1000 * 60 * 60))
+
+      // Calculate startDate by subtracting 90 days and converting to hours
+      val startDate = date.minusDays(90)
+      val startInMilliseconds = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant.toEpochMilli
+      val startInHours = "%010d".format(startInMilliseconds / (1000 * 60 * 60))
+
+      val startRowKey = pm.reverse.padTo(8, '0').reverse + measureInterval + startInHours + "00000"
+      val endRowKey = pm.reverse.padTo(8, '0').reverse + measureInterval + endInHours + "99999"
       ranges.add(new RowRange(Bytes.toBytes(startRowKey), true, Bytes.toBytes(endRowKey), true))
     })
 

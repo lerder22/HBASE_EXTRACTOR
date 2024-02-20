@@ -269,7 +269,8 @@
                 <!-- Hadoop -->
                 <hadoop.master.username>recener</hadoop.master.username>
                 <hadoop.master.password>deptorecener</hadoop.master.password>
-                <hadoop.master.host>lvwpmiprdedge02.corp.ute.com.uy</hadoop.master.host>
+                <hadoop.master.host>MdmPrdEdge2.corp.ute.com.uy</hadoop.master.host>
+<!--                <hadoop.master.host>lvwpmiprdedge02.corp.ute.com.uy</hadoop.master.host>-->
                 <hadoop.master.port>22</hadoop.master.port>
                 <!-- Home folders -->
                 <!--suppress UnresolvedMavenProperty -->
@@ -281,6 +282,7 @@
                 <bigdata.database.auto>update</bigdata.database.auto>
                 <bigdata.database.schema>MDM_DATA</bigdata.database.schema>
                 <hbase.zookeeper.quorum>
+
                     mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy
                 </hbase.zookeeper.quorum>
                 <hbase.zookeeper.property.clientPort>2181</hbase.zookeeper.property.clientPort>

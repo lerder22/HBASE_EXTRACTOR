@@ -42,6 +42,33 @@ object Inventory {
           AND EC.READING_CONSTANT > 1)"""
   }
 
+  def findInspectedMeasuringPoints(): String = {
+
+    s"""(WITH TMP_KAIFA AS (
+       |  select DT1.PUNTO_SERVICIO, MED.FECHA_DESDE
+       |  from dwhcbprd.dw_datos_punto_servicio@biprdha dt1
+       |    LEFT JOIN DWHCBPRD.dw_dt_medidor@biprdha med on med.numero_placa = dt1.numero_placa
+       |    where dt1.numero_placa like '070%'
+       |),
+       |ext_insp as (
+       |  select t.*, dense_rank() over (partition by id order by COMMIT_DTTM desc /*to obtain the most recent*/) date_rank
+       |  from deptorecener.dt_extraction_uruguay t
+       |  where to_date(fecha, 'dd/mm/yyyy') IN (select max(to_date(fecha, 'dd/mm/yyyy')) from deptorecener.dt_extraction_uruguay)
+       |        AND t.FECHAI1 IS NOT NULL
+       |        AND ROWNUM < 10000
+       |), tmp_pm as(
+       |  SELECT DISTINCT ID, CODE
+       |  FROM MEASURING_POINT@bdmdmprd MP
+       |)
+       |select DISTINCT PM.ID PUNTO_SERVICIO, T.FECHAI1
+       |from tmp_pm pm left join ext_insp t on pm.CODE = T.ID
+       |where fechai1 is not null
+       |  and t.id in (
+       |      SELECT PUNTO_SERVICIO FROM  TMP_KAIFA KF
+       |      WHERE to_date(T.fechaI1, 'DD/MM/YYYY') >= KF.FECHA_DESDE
+       |  ))""".stripMargin
+  }
+
   def findIndirectMeasuringPointsInfo(): String = {
 
     s"""(SELECT MP.ID, MP.CODE, O.MANAGEMENT, O.CODE AS OFFICE, T.CODE AS TARIFF_STRUCTURE,
