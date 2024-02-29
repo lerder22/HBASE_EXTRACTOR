@@ -28,9 +28,11 @@ object Inventory {
   def findMeasuringPointsBySource(source: Int): String = {
 
 
-    s"""(SELECT MEASURING_POINT.ID, MEASURING_POINT.CODE
-       FROM MDMEXP.MEASURING_POINT@bdmdmprd
-       WHERE  MEASURING_POINT.DEFAULT_SOURCE=${"'"+source+"'"})"""
+    s"""(SELECT DISTINCT MEASURING_POINT.ID, MEASURING_POINT.CODE
+    FROM MDMEXP.MEASURING_POINT@bdmdmprd left join
+     DWHCBPRD.DW_DATOS_PUNTO_SERVICIO@BIPRDHA DT
+       ON DT.PUNTO_SERVICIO = MEASURING_POINT.CODE
+    WHERE DT.FASES LIKE 'TRI%' AND DT.NUMERO_PLACA LIKE '070%')"""
   }
 
   def findIndirectMeasuringPoints(): String = {
@@ -55,7 +57,7 @@ object Inventory {
        |  from deptorecener.dt_extraction_uruguay t
        |  where to_date(fecha, 'dd/mm/yyyy') IN (select max(to_date(fecha, 'dd/mm/yyyy')) from deptorecener.dt_extraction_uruguay)
        |        AND t.FECHAI1 IS NOT NULL
-       |        AND ROWNUM < 10000
+       |        AND ROWNUM < 100
        |), tmp_pm as(
        |  SELECT DISTINCT ID, CODE
        |  FROM MEASURING_POINT@bdmdmprd MP

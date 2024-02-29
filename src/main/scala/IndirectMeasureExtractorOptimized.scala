@@ -80,12 +80,12 @@ object IndirectMeasureExtractorOptimized {
           .transform(joinWithSources(_, jdbcUrl, connectionProperties, spark))
           .transform(joinWithMagnitudes(_, jdbcUrl, connectionProperties, spark))
           .transform(formatDataFrame(_, spark))
-
         // Guardar o anexar el DataFrame procesado en el archivo
         processedDF.coalesce(1).
           write.mode(SaveMode.Append).
           options(Map("header" -> "true", "delimiter" -> ";")).
           csv(outputPath)
+
       }
     }
 

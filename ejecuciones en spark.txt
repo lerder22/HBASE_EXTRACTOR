@@ -1,89 +1,40 @@
-(Thursday, August 31, 2023 3:00:00 AM) 1693450800000
-(Sunday, October 1, 2023 3:00:00 AM)   1696129200000
-
-spark-submit --class IndirectMeasureExtractor --master yarn --deploy-mode cluster --conf spark.kryoserializer.buffer.max=1024 --conf spark.sql.broadcastTimeout=-1 --conf spark.dynamicAllocation.initialExecutors=5 --conf spark.dynamicAllocation.minExecutors=5 --conf spark.dynamicAllocation.maxExecutors=300 --conf spark.driver.memory=20gb --executor-memory 5GB --jars $(echo ../../jars/*.jar | tr ' ' ',') --queue root.datanodo DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar 1696018441000 1696129200000 user/deptorecener/indirectMeasures/20231031
-
---------------------------------------
-
-spark-submit --class OMDaiceExtractorV3 --master yarn --deploy-mode cluster --conf spark.kryoserializer.buffer.max=1024 --conf spark.sql.broadcastTimeout=-1 --conf spark.dynamicAllocation.initialExecutors=5 --conf spark.dynamicAllocation.minExecutors=5 --conf spark.dynamicAllocation.maxExecutors=300 --conf spark.driver.memory=20gb --executor-memory 5G --jars $(echo ../../jars/*.jar | tr ' ' ',') --queue root.datanodo DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar 202306300000 202310020000
-
-
----------------------------------------
-
-spark-submit \
---class IndirectMeasureExtractor \
---master yarn \
---deploy-mode cluster \
---conf spark.kryoserializer.buffer.max=2048 \
---conf spark.sql.broadcastTimeout=-1 \
---conf spark.dynamicAllocation.initialExecutors=5 \
---conf spark.dynamicAllocation.minExecutors=5 \
---conf spark.dynamicAllocation.maxExecutors=300 \
---conf spark.driver.memory=25g \
---executor-memory 8GB \
---conf spark.memory.offHeap.enabled=true \
---conf spark.memory.offHeap.size=4g \
---conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
---conf spark.memory.fraction=0.3 \
---jars $(echo ../../jars/*.jar | tr ' ' ',') \
---queue root.datanodo \
-DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar \
-1696018441000 1696129200000 user/deptorecener/indirectMeasures/20231017
-
-------------------------------------
-
-spark-submit \
---class IndirectMeasureExtractor \
---master yarn \
---deploy-mode cluster \
---conf spark.kryoserializer.buffer.max=1024 \
---conf spark.sql.broadcastTimeout=-1 \
---conf spark.dynamicAllocation.initialExecutors=5 \
---conf spark.dynamicAllocation.minExecutors=5 \
---conf spark.dynamicAllocation.maxExecutors=300 \
---conf spark.driver.memory=20g \
---executor-memory 8GB \
---conf spark.memory.offHeap.enabled=true \
---conf spark.memory.offHeap.size=4g \
---conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
---conf spark.memory.fraction=0.3 \
---jars $(echo ../../jars/*.jar | tr ' ' ',') \
---queue root.datanodo \
-DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar \
-1696018441000 1696129200000 user/deptorecener/indirectMeasures/20231121
-
-
-
-GRIDSPERTISE
-
-Yes	
-emilianoacevedopiotti@gmail.com - organizer
- 	
-alicia@fing.edu.uy
- 	
-amartins@ute.com.uy
-Yes	
-gcaudullo@ute.com.uy
- 	
-aliciafernandezp@gmail.com
- 	
-Caudullo Ronchi, Gonzalo Enrique
- 	
-dmaldonado@ute.com.uy
- 	
-hreyes@ute.com.uy
- 	
-aheberling@ute.com.uy
- 	
-agomez@fing.edu.uy
-Yes	
-camilo.marino.cabrera@gmail.com
-
-
 -------------------------------
+-- Para puntos de servicio de medida indirecta
 
 spark-submit --class IndirectMeasureExtractorOptimized --master yarn --deploy-mode cluster --conf spark.kryoserializer.buffer.max=1024 --conf spark.sql.broadcastTimeout=-1 --conf spark.dynamicAllocation.initialExecutors=5 --conf spark.dynamicAllocation.minExecutors=5 --conf spark.dynamicAllocation.maxExecutors=300 --conf spark.driver.memory=20g --executor-memory 8GB --conf spark.memory.offHeap.enabled=true --conf spark.memory.offHeap.size=4g --conf spark.serializer=org.apache.spark.serializer.KryoSerializer --conf spark.memory.fraction=0.3 --jars $(echo ../../jars/*.jar | tr ' ' ',') --queue root.datanodo DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar 202312010000 202312310000 user/deptorecener/indirectMeasures/20231121 1000
 
 ------------------------------
+-- Curvas de consumo
 
-spark-submit --class OMDaiceExtractorV2 --master yarn --deploy-mode cluster --conf spark.kryoserializer.buffer.max=1024 --conf spark.sql.broadcastTimeout=-1 --conf spark.dynamicAllocation.initialExecutors=5 --conf spark.dynamicAllocation.minExecutors=5 --conf spark.dynamicAllocation.maxExecutors=300 --conf spark.driver.memory=20gb --executor-memory 5G --jars $(echo ../../jars/*.jar | tr ' ' ',') --queue root.datanodo DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar 202311010000 202402010000
+spark-submit --class OMDaiceExtractorV2 --master yarn --deploy-mode cluster --conf spark.kryoserializer.buffer.max=1024 --conf spark.sql.broadcastTimeout=-1 --conf spark.dynamicAllocation.initialExecutors=5 --conf spark.dynamicAllocation.minExecutors=5 --conf spark.dynamicAllocation.maxExecutors=300 --conf spark.driver.memory=20gb --executor-memory 5G --jars $(echo ../../jars/*.jar | tr ' ' ',') --queue root.datanodo DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar KAIFA 202311010000 202402010000
+
+
+------------------------------
+-- Para los puntos de servicio trifásicos
+
+spark-submit --class IVDaiceExtractor --master yarn --deploy-mode cluster --conf spark.kryoserializer.buffer.max=1024 --conf spark.sql.broadcastTimeout=-1 --conf spark.dynamicAllocation.initialExecutors=5 --conf spark.dynamicAllocation.minExecutors=5 --conf spark.dynamicAllocation.maxExecutors=300 --conf spark.driver.memory=20gb --executor-memory 5GB --jars $(echo ../../jars/*.jar | tr ' ' ',') --queue root.datanodo DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar Grupo_fernanda 1704067200000 1706745600000 user/deptorecener/20240223
+
+------------------------------
+-- Para los puntos de servicio trifásicos 100k
+spark-submit \
+  --class IVDaiceExtractor \
+  --master yarn \
+  --deploy-mode cluster \
+  --conf spark.kryoserializer.buffer.max=1024m \
+  --conf spark.sql.broadcastTimeout=1200 \
+  --conf spark.dynamicAllocation.enabled=true \
+  --conf spark.dynamicAllocation.initialExecutors=10 \
+  --conf spark.dynamicAllocation.minExecutors=10 \
+  --conf spark.dynamicAllocation.maxExecutors=300 \
+  --conf spark.shuffle.service.enabled=true \
+  --conf spark.executor.memoryOverhead=2048 \
+  --conf spark.driver.memoryOverhead=2048 \
+  --conf spark.driver.memory=25g \
+  --conf spark.executor.memory=10g \
+  --conf "spark.executor.extraJavaOptions=-XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+UseG1GC -Djava.io.tmpdir=./tmp" \
+  --conf "spark.driver.extraJavaOptions=-XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+UseG1GC" \
+  --executor-cores 4 \
+  --jars $(echo ../../jars/*.jar | tr ' ' ',') \
+  --queue root.datanodo \
+  DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar Grupo_fernanda 1704067200000 1706745600000 user/deptorecener/20240223
+
