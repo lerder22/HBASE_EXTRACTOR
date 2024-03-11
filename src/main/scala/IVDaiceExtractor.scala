@@ -84,7 +84,7 @@ object IVDaiceExtractor {
 
     // phase = 0 --> monophasic
     // phase = 1 --> triphasic
-    for (phase <- 0 to 1) {
+    for (phase <- 1 to 1) {
 
       //val findAllMeasuringPointsSql = Inventory.findMeasuringPointsByGroupAndPhase(group, phase)
       val findAllMeasuringPointsSql = Inventory.findMeasuringPointsBySource(21)
@@ -165,8 +165,8 @@ object IVDaiceExtractor {
               .withColumnRenamed("date_range", "date")
               .orderBy($"measuring_point", $"date")
 
-            formattedDF.repartition(20)
-              .write.mode(SaveMode.Overwrite)
+            formattedDF.repartition(1)
+              .write.mode(SaveMode.Append)
               .options(Map("header" -> "true", "delimiter" -> ","))
               .csv("hdfs:////" + directory + "/monophasic")
 
@@ -196,10 +196,15 @@ object IVDaiceExtractor {
               .withColumnRenamed("date_range", "date")
               .orderBy($"measuring_point", $"date")
 
-            formattedDF.coalesce(1).
-              write.mode(SaveMode.Overwrite).
-              options(Map("header" -> "true", "delimiter" -> ",")).
-              csv("hdfs:////" + directory + "/triphasic")
+            formattedDF.repartition(1)
+              .write.mode(SaveMode.Append)
+              .options(Map("header" -> "true", "delimiter" -> ","))
+              .csv("hdfs:////" + directory + "/triphasic")
+
+//            formattedDF.coalesce(1).
+//              write.mode(SaveMode.Overwrite).
+//              options(Map("header" -> "true", "delimiter" -> ",")).
+//              csv("hdfs:////" + directory + "/triphasic")
 
           }
         }

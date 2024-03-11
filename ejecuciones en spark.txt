@@ -38,3 +38,11 @@ spark-submit \
   --queue root.datanodo \
   DAICE-spark-1.0-SNAPSHOT-jar-with-dependencies.jar Grupo_fernanda 1704067200000 1706745600000 user/deptorecener/20240223
 
+
+------------------------------
+
+
+
+
+
+
