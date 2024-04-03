@@ -25,7 +25,7 @@ object Inventory {
        AND MEASURING_POINT_TECHNICAL_DATA.PHASE_TYPE=""" + phase + """)"""
   }
 
-  def findMeasuringPointsBySource(source: Int): String = {
+  def   findMeasuringPointsBySource(source: Int): String = {
 
 
     s"""(SELECT DISTINCT MEASURING_POINT.ID, MEASURING_POINT.CODE
@@ -51,6 +51,34 @@ object Inventory {
        |  from dwhcbprd.dw_datos_punto_servicio@biprdha dt1
        |    LEFT JOIN DWHCBPRD.dw_dt_medidor@biprdha med on med.numero_placa = dt1.numero_placa
        |    where dt1.numero_placa like '070%'
+       |),
+       |ext_insp as (
+       |  select t.*, dense_rank() over (partition by id order by COMMIT_DTTM desc /*to obtain the most recent*/) date_rank
+       |  from deptorecener.dt_extraction_uruguay t
+       |  where to_date(fecha, 'dd/mm/yyyy') IN (select max(to_date(fecha, 'dd/mm/yyyy')) from deptorecener.dt_extraction_uruguay)
+       |        AND t.FECHAI1 IS NOT NULL
+       |        AND ROWNUM < 100
+       |), tmp_pm as(
+       |  SELECT DISTINCT ID, CODE
+       |  FROM MEASURING_POINT@bdmdmprd MP
+       |)
+       |select DISTINCT PM.ID PUNTO_SERVICIO, T.FECHAI1
+       |from tmp_pm pm left join ext_insp t on pm.CODE = T.ID
+       |where fechai1 is not null
+       |  and t.id in (
+       |      SELECT PUNTO_SERVICIO FROM  TMP_KAIFA KF
+       |      WHERE to_date(T.fechaI1, 'DD/MM/YYYY') >= KF.FECHA_DESDE
+       |  ))""".stripMargin
+  }
+
+  def findInspectedTriphasicMeasuringPoints(): String = {
+
+    s"""(WITH TMP_KAIFA AS (
+       |  select count(distinct dt1.punto_servicio) --DT1.PUNTO_SERVICIO, MED.FECHA_DESDE
+       |  from dwhcbprd.dw_datos_punto_servicio@biprdha dt1
+       |    LEFT JOIN DWHCBPRD.dw_dt_medidor@biprdha med on med.numero_placa = dt1.numero_placa
+       |    where dt1.numero_placa like '070%' and TRIM(dt1.fases) = 'TRIFASICO'
+       |      AND med.Fecha_Desde is not null
        |),
        |ext_insp as (
        |  select t.*, dense_rank() over (partition by id order by COMMIT_DTTM desc /*to obtain the most recent*/) date_rank

@@ -295,7 +295,7 @@ object OMDaiceExtractorOptimized {
     val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT-3")) // Set Uruguay timezone
     val currentDateTime = dateFormat.format(new Date())
-    val outputPath = s"hdfs:////user/deptorecener/alexOutputs/$currentDateTime/omDAICE/"
+    val outputPath = s"hdfs:////user/deptorecener/alexOutputs/omDAICE/$currentDateTime/"
 
     df.coalesce(1)
       .write.mode(SaveMode.Append)
