@@ -57,12 +57,12 @@ object Inventory {
        |  from deptorecener.dt_extraction_uruguay t
        |  where to_date(fecha, 'dd/mm/yyyy') IN (select max(to_date(fecha, 'dd/mm/yyyy')) from deptorecener.dt_extraction_uruguay)
        |        AND t.FECHAI1 IS NOT NULL
-       |        AND ROWNUM < 100
+       |        -- AND ROWNUM < 10000
        |), tmp_pm as(
        |  SELECT DISTINCT ID, CODE
        |  FROM MEASURING_POINT@bdmdmprd MP
        |)
-       |select DISTINCT PM.ID PUNTO_SERVICIO, T.FECHAI1
+       |select DISTINCT PM.ID PUNTO_SERVICIO, pm.code PUNTO_SERVICIO_CCB, T.FECHAI1
        |from tmp_pm pm left join ext_insp t on pm.CODE = T.ID
        |where fechai1 is not null
        |  and t.id in (
