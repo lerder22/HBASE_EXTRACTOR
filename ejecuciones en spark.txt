@@ -40,6 +40,13 @@ spark-submit \
 
 
 ------------------------------
+Mover archivos y comprimir:
+
+Step 1: Copy files from HDFS to local file system on Hadoop node:
+$ hdfs dfs -copyToLocal /user/deptorecener/alexOutputs/omDAICEshifted/ ./
+
+Step 2: Compress the directory:
+$ tar -czvf omDAICEshifted.tar.gz omDAICEshifted
 
 
 

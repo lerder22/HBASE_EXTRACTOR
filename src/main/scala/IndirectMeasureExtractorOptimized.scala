@@ -105,7 +105,7 @@ object IndirectMeasureExtractorOptimized {
     import spark.implicits._
 
     // Assuming Inventory.findInspectedMeasuringPoints() returns a SQL query that includes a DATE column in 'dd/MM/yyyy' format
-    val findIndirectMeasuringPointsSql = Inventory.findInspectedMeasuringPoints()
+    val findIndirectMeasuringPointsSql = Inventory.findInspectedMeasuringPoints(3)
 
     // Read the data from your database
     val measuringPointDf = spark.read.jdbc(jdbcUrl, findIndirectMeasuringPointsSql, connectionProperties)

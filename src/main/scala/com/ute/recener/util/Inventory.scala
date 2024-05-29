@@ -44,31 +44,23 @@ object Inventory {
           AND EC.READING_CONSTANT > 1)"""
   }
 
-  def findInspectedMeasuringPoints(): String = {
-
-    s"""(WITH TMP_KAIFA AS (
-       |  select DT1.PUNTO_SERVICIO, MED.FECHA_DESDE
-       |  from dwhcbprd.dw_datos_punto_servicio@biprdha dt1
-       |    LEFT JOIN DWHCBPRD.dw_dt_medidor@biprdha med on med.numero_placa = dt1.numero_placa
-       |    where dt1.numero_placa like '070%'
+  def findInspectedMeasuringPoints(secondParam: Int): String = {
+    s"""(
+       |WITH tmp AS (
+       |  SELECT dt.*,
+       |         ROW_NUMBER() OVER (ORDER BY NULL) AS rn
+       |  FROM DEPTORECENER.TMP_INSP_MBI dt
        |),
-       |ext_insp as (
-       |  select t.*, dense_rank() over (partition by id order by COMMIT_DTTM desc /*to obtain the most recent*/) date_rank
-       |  from deptorecener.dt_extraction_uruguay t
-       |  where to_date(fecha, 'dd/mm/yyyy') IN (select max(to_date(fecha, 'dd/mm/yyyy')) from deptorecener.dt_extraction_uruguay)
-       |        AND t.FECHAI1 IS NOT NULL
-       |        -- AND ROWNUM < 10000
-       |), tmp_pm as(
-       |  SELECT DISTINCT ID, CODE
-       |  FROM MEASURING_POINT@bdmdmprd MP
+       |tmp2 AS (
+       |  SELECT
+       |    CEIL(rn / 15000) AS batch_number,
+       |    tmp.*
+       |  FROM tmp
        |)
-       |select DISTINCT PM.ID PUNTO_SERVICIO, pm.code PUNTO_SERVICIO_CCB, T.FECHAI1
-       |from tmp_pm pm left join ext_insp t on pm.CODE = T.ID
-       |where fechai1 is not null
-       |  and t.id in (
-       |      SELECT PUNTO_SERVICIO FROM  TMP_KAIFA KF
-       |      WHERE to_date(T.fechaI1, 'DD/MM/YYYY') >= KF.FECHA_DESDE
-       |  ))""".stripMargin
+       |SELECT PUNTO_MEDIDA_INTERNO, PUNTO_SERVICIO, FECHAI1
+       |FROM tmp2
+       |WHERE BATCH_NUMBER in (${secondParam})
+       |)""".stripMargin
   }
 
   def findInspectedTriphasicMeasuringPoints(): String = {

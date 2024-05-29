@@ -27,8 +27,8 @@ import org.apache.spark.sql.types._
 
 object OMInspectionsExtractor {
   final val cfDataOM = "OM"
-  private final val PUNTO_SERVICIO_MDM = "PUNTO_SERVICIO"
-  private final val PUNTO_SERVICIO_CCB = "PUNTO_SERVICIO_CCB"
+  private final val PUNTO_SERVICIO_MDM = "PUNTO_MEDIDA_INTERNO"
+  private final val PUNTO_SERVICIO_CCB = "PUNTO_SERVICIO"
 
   private val serialVersionUID = 1L
 
@@ -38,13 +38,17 @@ object OMInspectionsExtractor {
 
     // Default value for coalesce
     var numPartitions = 10 // Default value in case the argument is not provided
+    var secondParam = 1
 
-    // Check if the argument is provided and is a valid integer
+    // Check if the arguments are provided and are valid
     if (args.length > 0) {
       try {
         numPartitions = args(0).toInt
+        if (args.length > 1) {
+          secondParam = args(1).toInt
+        }
       } catch {
-        case e: NumberFormatException => println("The first argument is not an integer. Using default value.")
+        case e: NumberFormatException => println("One or both arguments are not integers. Using default values.")
       }
     }
 
@@ -52,8 +56,8 @@ object OMInspectionsExtractor {
     val connectionProperties = DataBaseConnection.getConnectionProperties
     val spark = SparkSession.builder().config(conf).getOrCreate()
 
-//    val exampleHConf = HBaseConfiguration.create()
-//    exampleHConf.set("hbase.zookeeper.quorum", "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
+    //    val exampleHConf = HBaseConfiguration.create()
+    //    exampleHConf.set("hbase.zookeeper.quorum", "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
 
     val dateFormat = new SimpleDateFormat("yyyyMMddHHmm")
 
@@ -62,120 +66,120 @@ object OMInspectionsExtractor {
     val outputPath = s"hdfs:////user/deptorecener/alexOutputs/omDAICEshifted/$currentDateTime/"
 
     // Suponiendo que measuringPointDF es un DataFrame con 360k filas
-    val measuringPointDF = getMeasuringPointWithDatesDF(jdbcUrl, connectionProperties, spark)
+    val measuringPointDF = getMeasuringPointWithDatesDF(secondParam, jdbcUrl, connectionProperties, spark)
 
     val numPartitionsDF = (measuringPointDF.count() / 10).toInt + 1
 
-//    val partitionedDF = measuringPointDF.repartition(numPartitionsDF)
+    //    val partitionedDF = measuringPointDF.repartition(numPartitionsDF)
 
-//    if(partitionedDF != null){
-//      // Procesar cada chunk
-      extractOMData(measuringPointDF, numPartitions, outputPath, spark)
-//    }
+    //    if(partitionedDF != null){
+    //      // Procesar cada chunk
+    extractOMData(measuringPointDF, numPartitions, secondParam, outputPath, spark)
+    //    }
 
-//    spark.stop()
+    //    spark.stop()
 
   }
 
-  private def extractOMData(partitionedDF: DataFrame, numPartitions: Int, outputPath: String, spark: SparkSession): Unit = {
+  private def extractOMData(partitionedDF: DataFrame, numPartitions: Int, secondParam: Int, outputPath: String, spark: SparkSession): Unit = {
     import spark.implicits._
 
     val mi = "1" // Measurement interval = 1 = QH
 
     var measuringPointDF = partitionedDF
-//    partitionedDF.foreachPartition { partitionIterator =>
-//      if (partitionIterator.nonEmpty) {
-        // Initialize the HBaseConfiguration inside the lambda function to avoid serialization issues
-        val hBaseConfLocal = HBaseConfiguration.create()
-        hBaseConfLocal.set("hbase.zookeeper.quorum", "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
-        hBaseConfLocal.set(TableInputFormat.INPUT_TABLE, "MDM_DATA:OM")
+    //    partitionedDF.foreachPartition { partitionIterator =>
+    //      if (partitionIterator.nonEmpty) {
+    // Initialize the HBaseConfiguration inside the lambda function to avoid serialization issues
+    val hBaseConfLocal = HBaseConfiguration.create()
+    hBaseConfLocal.set("hbase.zookeeper.quorum", "mdmprdmgm.corp.ute.com.uy,mdmprdhed1.corp.ute.com.uy,mdmprdhed2.corp.ute.com.uy")
+    hBaseConfLocal.set(TableInputFormat.INPUT_TABLE, "MDM_DATA:OM")
 
-        // Define the schema based on your DataFrame's structure
-        val schema = StructType(Seq(
-          StructField("PM", StringType, true),
-          StructField("PUNTO_SERVICIO_CCB", StringType, true),
-          StructField("DATE", StringType, true) // Adjust types as needed
-        ))
-        // Convert the iterator to a Seq and then to a DataFrame
-//        val rows = partitionIterator.filter(_ != null).toSeq // Filter out null rows
-//        if (rows.nonEmpty) {
-          // Create an RDD from the Seq of Rows
-//          val rowsRDD = spark.sparkContext.parallelize(rows)
+    // Define the schema based on your DataFrame's structure
+    val schema = StructType(Seq(
+      StructField("PM", StringType, true),
+      StructField("PUNTO_SERVICIO_CCB", StringType, true),
+      StructField("DATE", StringType, true) // Adjust types as needed
+    ))
+    // Convert the iterator to a Seq and then to a DataFrame
+    //        val rows = partitionIterator.filter(_ != null).toSeq // Filter out null rows
+    //        if (rows.nonEmpty) {
+    // Create an RDD from the Seq of Rows
+    //          val rowsRDD = spark.sparkContext.parallelize(rows)
 
-          // Create a DataFrame from the RDD and schema
-//          val measuringPointDF = spark.createDataFrame(rowsRDD, schema)
+    // Create a DataFrame from the RDD and schema
+    //          val measuringPointDF = spark.createDataFrame(rowsRDD, schema)
 
-          // Ensure filterByServicePointOM doesn't return null or cause an exception
-          val scanConfig = Option(filterByServicePointOM(measuringPointDF, mi)).getOrElse("")
-          hBaseConfLocal.set(TableInputFormat.SCAN, scanConfig)
+    // Ensure filterByServicePointOM doesn't return null or cause an exception
+    val scanConfig = Option(filterByServicePointOM(measuringPointDF, mi)).getOrElse("")
+    hBaseConfLocal.set(TableInputFormat.SCAN, scanConfig)
 
-          val hBaseRDD: RDD[(ImmutableBytesWritable, Result)] = spark.sparkContext.newAPIHadoopRDD(hBaseConfLocal, classOf[TableInputFormat], classOf[ImmutableBytesWritable], classOf[Result])
-          val resultRDD = hBaseRDD.map(tuple => tuple._2)
-          val omRDD = resultRDD.map(x => MappingSchema.parseOmRow(x, cfDataOM))
+    val hBaseRDD: RDD[(ImmutableBytesWritable, Result)] = spark.sparkContext.newAPIHadoopRDD(hBaseConfLocal, classOf[TableInputFormat], classOf[ImmutableBytesWritable], classOf[Result])
+    val resultRDD = hBaseRDD.map(tuple => tuple._2)
+    val omRDD = resultRDD.map(x => MappingSchema.parseOmRow(x, cfDataOM))
 
-          var transformedDf = omRDD.toDF()
-            .withColumn("dayDate", to_date(to_utc_timestamp(from_unixtime((($"day") / 1000), "yyyy-MM-dd HH:mm:ss"), "UTC")))
-            .withColumn("DAY_TIME", upperUDF($"dayDate", $"period")) // Crea columna DAY_TIME
-            .withColumn("day", to_utc_timestamp($"DAY_TIME", "yyyy-MM-dd HH:mm:ss"))
-            .withColumnRenamed("day", "date")
-            .select($"measuring_point", $"date", $"magnitude", $"measurement_interval", $"value", $"source")
-            // Filter where magnitude is either "1" or "3" and source is "41"
-            .filter($"magnitude".isin("1", "3") && $"source" === "41")
+    var transformedDf = omRDD.toDF()
+      .withColumn("dayDate", to_date(to_utc_timestamp(from_unixtime((($"day") / 1000), "yyyy-MM-dd HH:mm:ss"), "UTC")))
+      .withColumn("DAY_TIME", upperUDF($"dayDate", $"period")) // Crea columna DAY_TIME
+      .withColumn("day", to_utc_timestamp($"DAY_TIME", "yyyy-MM-dd HH:mm:ss"))
+      .withColumnRenamed("day", "date")
+      .select($"measuring_point", $"date", $"magnitude", $"measurement_interval", $"value", $"source")
+      // Filter where magnitude is either "1" or "3" and source is "41"
+      .filter($"magnitude".isin("1", "3") && $"source" === "41")
 
-          // Group by 'measuring_point' and 'date', pivot on 'magnitude', and find the max 'value' for each group
-          var omAggregatedDF = transformedDf
-            .groupBy($"measuring_point", $"date")
-            .pivot("magnitude")
-            .max("value")
+    // Group by 'measuring_point' and 'date', pivot on 'magnitude', and find the max 'value' for each group
+    var omAggregatedDF = transformedDf
+      .groupBy($"measuring_point", $"date")
+      .pivot("magnitude")
+      .max("value")
 
-          // Now, 'resultDf' contains the desired transformation
-          // Check if column "1" exists before renaming
-          if (omAggregatedDF.columns.contains("1")) {
-            omAggregatedDF = omAggregatedDF.withColumnRenamed("1", "active_energy")
-          } else {
-            omAggregatedDF = omAggregatedDF.withColumn("active_energy", lit(-1))
-          }
+    // Now, 'resultDf' contains the desired transformation
+    // Check if column "1" exists before renaming
+    if (omAggregatedDF.columns.contains("1")) {
+      omAggregatedDF = omAggregatedDF.withColumnRenamed("1", "active_energy")
+    } else {
+      omAggregatedDF = omAggregatedDF.withColumn("active_energy", lit(-1))
+    }
 
-          // Check if column "3" exists before renaming
-          if (omAggregatedDF.columns.contains("3")) {
-            omAggregatedDF = omAggregatedDF.withColumnRenamed("3", "reactive_energy_1")
-          } else {
-            omAggregatedDF = omAggregatedDF.withColumn("reactive_energy_1", lit(-1))
-          }
+    // Check if column "3" exists before renaming
+    if (omAggregatedDF.columns.contains("3")) {
+      omAggregatedDF = omAggregatedDF.withColumnRenamed("3", "reactive_energy_1")
+    } else {
+      omAggregatedDF = omAggregatedDF.withColumn("reactive_energy_1", lit(-1))
+    }
 
-//           Hacemos el join para cambiar el código de mdm por el punto de servicio
+    //           Hacemos el join para cambiar el código de mdm por el punto de servicio
     omAggregatedDF = omAggregatedDF.join(
-            measuringPointDF,
+        measuringPointDF,
         omAggregatedDF("measuring_point") === measuringPointDF("PM")
-          )
-            .select(
-            measuringPointDF(PUNTO_SERVICIO_CCB).alias("measuring_point"),
-              omAggregatedDF("date"),
-              omAggregatedDF("active_energy"),
-              omAggregatedDF("reactive_energy_1")
-          )
+      )
+      .select(
+        measuringPointDF(PUNTO_SERVICIO_CCB).alias("measuring_point"),
+        omAggregatedDF("date"),
+        omAggregatedDF("active_energy"),
+        omAggregatedDF("reactive_energy_1")
+      )
 
 
-          // Guardar o anexar el DataFrame procesado en el archivo
-          omAggregatedDF.coalesce(numPartitions)
-            .write
-            .mode(SaveMode.Append)
-            .option("header", "true")
-            .option("delimiter", ";")
-            .csv(outputPath)
+    // Guardar o anexar el DataFrame procesado en el archivo
+    omAggregatedDF.coalesce(numPartitions)
+      .write
+      .mode(SaveMode.Append)
+      .option("header", "true")
+      .option("delimiter", ";")
+      .csv(outputPath)
 
 
-//        }
-//      }
-//    }
+    //        }
+    //      }
+    //    }
   }
 
 
-  private def getMeasuringPointWithDatesDF(jdbcUrl: String, connectionProperties: Properties, spark: SparkSession): DataFrame = {
+  private def getMeasuringPointWithDatesDF(secondParam: Int, jdbcUrl: String, connectionProperties: Properties, spark: SparkSession): DataFrame = {
     import spark.implicits._
 
     // Assuming Inventory.findInspectedMeasuringPoints() returns a SQL query that includes a DATE column in 'dd/MM/yyyy' format
-    val findInspectedMeasuringPointsSql = Inventory.findInspectedMeasuringPoints()
+    val findInspectedMeasuringPointsSql = Inventory.findInspectedMeasuringPoints(secondParam)
 
     // Read the data from your database
     val measuringPointDf = spark.read.jdbc(jdbcUrl, findInspectedMeasuringPointsSql, connectionProperties)
