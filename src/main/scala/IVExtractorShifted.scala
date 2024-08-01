@@ -1,5 +1,3 @@
-package com.ute.recener
-
 import com.ute.recener.util.{DataBaseConnection, Inventory, MappingSchema}
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{Result, Scan}
@@ -15,11 +13,9 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{IntegerType, StringType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession, functions}
 
-import java.time.Duration
-import java.util.{ArrayList, Base64}
-import java.time.LocalDate
+import java.time.{Duration, LocalDate, ZoneId}
 import java.time.format.DateTimeFormatter
-import java.time.ZoneId
+import java.util.{ArrayList, Base64}
 
 
 object IVExtractorShifted {
