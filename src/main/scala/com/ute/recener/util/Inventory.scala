@@ -32,7 +32,10 @@ object Inventory {
     FROM MDMEXP.MEASURING_POINT@bdmdmprd left join
      DWHCBPRD.DW_DATOS_PUNTO_SERVICIO@BIPRDHA DT
        ON DT.PUNTO_SERVICIO = MEASURING_POINT.CODE
-    WHERE DT.FASES LIKE 'TRI%' AND DT.NUMERO_PLACA LIKE '070%')"""
+    WHERE
+      -- DT.FASES LIKE 'TRI%' AND
+      DT.NUMERO_PLACA LIKE '070%'
+    )"""
   }
 
   def findIndirectMeasuringPoints(): String = {
@@ -60,6 +63,16 @@ object Inventory {
        |SELECT PUNTO_MEDIDA_INTERNO, PUNTO_SERVICIO, FECHAI1
        |FROM tmp2
        |WHERE BATCH_NUMBER in (${secondParam})
+       |)""".stripMargin
+  }
+
+  def getInspectedMeasuringPointsWithDates(secondParam: Int): String = {
+    s"""(
+       |SELECT DISTINCT MEASURING_POINT.ID PUNTO_MEDIDA_MDM,
+       |  MEASURING_POINT.CODE PUNTO_SERVICIO, FECHAI1
+       |FROM MDMEXP.MEASURING_POINT@bdmdmprd inner join
+       |  deptorecener.tmp_monofasico DT
+       |    ON DT.PUNTO_SERVICIO = MEASURING_POINT.CODE
        |)""".stripMargin
   }
 

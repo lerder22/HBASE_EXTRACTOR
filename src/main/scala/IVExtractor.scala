@@ -24,7 +24,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType}
 
 
 
-object IVDaiceExtractor {
+object IVExtractor {
 
 
   final val cfDataIV = "IV"
